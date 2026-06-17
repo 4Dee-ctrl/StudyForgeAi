@@ -51,20 +51,51 @@ class LocalStudyAidGenerator:
 		selected = _select_representative_sentences(sentences, limit=8)
 		takeaways = selected[:5] or [text[:220].strip()]
 
-		lines = [f"# Summary: {title}", "", "## Main Ideas"]
-		lines.extend(f"- {sentence}" for sentence in selected)
+		lines = [f"# Summary: {title}", "", "## Overview"]
+		overview = selected[:5] or takeaways
+		lines.extend(f"- {sentence}" for sentence in overview)
+
+		lines.extend(["", "## Core Concepts"])
+		if terms:
+			for term in terms[:8]:
+				lines.append(f"- **{term}:** {_definition_for(term, sentences)}")
+		else:
+			lines.append("- **Source Material:** The submitted text is the basis for this study aid.")
+
+		lines.extend(["", "## Process or Structure"])
+		process_items = selected[5:8]
+		if process_items:
+			lines.extend(f"- {sentence}" for sentence in process_items)
+		else:
+			lines.append("- No clear process or structure was provided in the source.")
+
 		lines.extend(["", "## Key Takeaways"])
 		lines.extend(f"- {item}" for item in takeaways)
 		lines.extend(["", "_Generated locally. Add a Gemini API key for richer AI output._"])
 		return "\n".join(lines)
 
 	def _key_terms(self, text: str, sentences: list[str], terms: list[str]) -> str:
-		lines = ["# Key Terms", "", "| Term | Definition |", "|---|---|"]
+		lines = [
+			"# Key Terms",
+			"",
+			"## Terms Table",
+			"| Term | Type | Definition | Why It Matters |",
+			"|---|---|---|---|",
+		]
 		for term in terms[:20]:
 			definition = _definition_for(term, sentences)
-			lines.append(f"| **{term}** | {definition} |")
-		if len(lines) == 3:
-			lines.append("| **Source Material** | The submitted study content. |")
+			lines.append(
+				f"| **{term}** | concept | {definition} | This is useful for reviewing the source material. |"
+			)
+		if len(lines) == 5:
+			lines.append(
+				"| **Source Material** | other | The submitted study content. | This is the basis for the study aid. |"
+			)
+		lines.extend(["", "## Quick Review"])
+		if terms:
+			lines.extend(f"- {term} connects to the main ideas in the source material." for term in terms[:5])
+		else:
+			lines.append("- _Limited by available source material._")
 		lines.extend(["", "_Generated locally. Add a Gemini API key for richer AI output._"])
 		return "\n".join(lines)
 
@@ -89,7 +120,7 @@ class LocalStudyAidGenerator:
 			)
 			answer_lines.append(f"**{index}.** A) {definition}")
 
-		lines.extend(["", "## Identification / Short Answer"])
+		lines.extend(["", "## Short Answer"])
 		offset = 5
 		for idx, sentence in enumerate(selected_sentences[:3], start=offset):
 			lines.extend(["", f"**{idx}. Briefly explain this idea:** {sentence}"])
@@ -114,21 +145,56 @@ class LocalStudyAidGenerator:
 			f"# Study Guide: {title}",
 			"",
 			"## Overview",
-			"This guide organizes the submitted material into review points, practice prompts, and a quick checklist.",
+			"- This guide organizes the submitted material into review points, practice prompts, and a quick checklist.",
+			"- Each item is based on the submitted source material.",
 			"",
-			"## What You Need to Know",
+			"## Learning Objectives",
 		]
-		lines.extend(f"- {sentence}" for sentence in selected)
+		if display_terms:
+			lines.extend(f"- I can explain {term}." for term in display_terms[:6])
+		else:
+			lines.append("- I can explain the main idea of the submitted source material.")
 
-		lines.extend(["", "## Important Terms"])
-		lines.extend(f"- **{term}:** {_definition_for(term, sentences)}" for term in display_terms)
+		lines.extend(["", "## Main Topics"])
+		if display_terms:
+			for term in display_terms[:5]:
+				lines.extend(
+					[
+						f"### {term}",
+						f"- **What it means:** {_definition_for(term, sentences)}",
+						"- **Details to remember:**",
+						f"- {term} appears as an important idea in the source material.",
+						"- **Common confusion:** Do not add outside facts beyond what the source supports.",
+					]
+				)
+		else:
+			lines.extend(
+				[
+					"### Submitted Study Material",
+					"- **What it means:** The submitted text is the source for this study guide.",
+					"- **Details to remember:**",
+					"- Review the source carefully before relying on generated material.",
+					"- **Common confusion:** Do not add outside facts beyond what the source supports.",
+				]
+			)
+
+		lines.extend(["", "## Review Questions"])
+		if display_terms:
+			lines.extend(f"- How would you explain {term} using the source material?" for term in display_terms[:5])
+		else:
+			lines.append("- What is the main idea of the submitted source material?")
 
 		lines.extend(["", "## Quick Review Checklist"])
-		lines.extend(f"- [ ] I can explain {term}." for term in display_terms[:6])
+		if display_terms:
+			lines.extend(f"- [ ] I can explain {term}." for term in display_terms[:6])
+		else:
+			lines.append("- [ ] I can explain the main idea of the source.")
 
-		lines.extend(["", "## Summary Table", "", "| Concept | Key Point |", "|---|---|"])
+		lines.extend(["", "## Summary Table", "", "| Concept | Key Point | Source Detail |", "|---|---|---|"])
 		for term in display_terms[:6]:
-			lines.append(f"| {term} | {_definition_for(term, sentences)} |")
+			lines.append(f"| {term} | Review this concept. | {_definition_for(term, sentences)} |")
+		if not display_terms:
+			lines.append("| Source Material | Review the submitted text. | _Limited by available source material._ |")
 
 		lines.extend(["", "_Generated locally. Add a Gemini API key for richer AI output._"])
 		return "\n".join(lines)
