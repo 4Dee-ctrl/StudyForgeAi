@@ -15,6 +15,24 @@ def _safe_filename(stem: str) -> str:
 	return "_".join(cleaned.split()) or "study_aid"
 
 
+def _pdf_safe_text(value: str) -> str:
+	replacements = {
+		"\u2018": "'",
+		"\u2019": "'",
+		"\u201c": '"',
+		"\u201d": '"',
+		"\u2013": "-",
+		"\u2014": "-",
+		"\u2022": "-",
+		"\u2026": "...",
+		"\u00a0": " ",
+	}
+	cleaned = value or ""
+	for source, replacement in replacements.items():
+		cleaned = cleaned.replace(source, replacement)
+	return cleaned.encode("latin-1", errors="replace").decode("latin-1")
+
+
 def _build_pdf_bytes(title: str, content: str) -> bytes:
 	from fpdf import FPDF
 
@@ -25,11 +43,11 @@ def _build_pdf_bytes(title: str, content: str) -> bytes:
 	effective_width = getattr(pdf, "epw", pdf.w - pdf.l_margin - pdf.r_margin)
 
 	pdf.set_font("Helvetica", size=14)
-	pdf.multi_cell(effective_width, 10, title)
+	pdf.multi_cell(effective_width, 10, _pdf_safe_text(title))
 
 	pdf.ln(2)
 	pdf.set_font("Helvetica", size=11)
-	pdf.multi_cell(effective_width, 6, content)
+	pdf.multi_cell(effective_width, 6, _pdf_safe_text(content))
 
 	out = pdf.output(dest="S")
 	if isinstance(out, str):
