@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from functools import lru_cache
 
 from fastapi import APIRouter
 
 from ..config import settings
+from ..exceptions import GeminiAPIError, ServerConfigurationError
 from ..schemas.models import GenerateMeta, GenerateRequest, GenerateResponse
-from ..services.gemini import GeminiService
-from ..services.local_generator import LocalStudyAidGenerator
+from ..services.gemini import GeminiResult, GeminiService
+from ..services.local_generator import LocalGenerateResult, LocalStudyAidGenerator
+
+logger = logging.getLogger("studyforge.generate")
 
 router = APIRouter(tags=["Generate"])
 
@@ -33,12 +37,31 @@ async def generate(payload: GenerateRequest) -> GenerateResponse:
 	"""
 
 	generator = _get_generator()
-	result = await asyncio.to_thread(
-		generator.generate,
-		text=payload.text,
-		study_aid_type=payload.type,
-	)
+	try:
+		result = await asyncio.to_thread(
+			generator.generate,
+			text=payload.text,
+			study_aid_type=payload.type,
+		)
+	except (GeminiAPIError, ServerConfigurationError) as exc:
+		logger.warning(
+			"Gemini unavailable; using local fallback generator (%s)",
+			exc.__class__.__name__,
+		)
+		result = await asyncio.to_thread(
+			LocalStudyAidGenerator().generate,
+			text=payload.text,
+			study_aid_type=payload.type,
+		)
 
+	return _response_from_result(payload=payload, result=result)
+
+
+def _response_from_result(
+	*,
+	payload: GenerateRequest,
+	result: GeminiResult | LocalGenerateResult,
+) -> GenerateResponse:
 	meta = GenerateMeta(
 		model=result.model,
 		input_tokens=result.input_tokens,
