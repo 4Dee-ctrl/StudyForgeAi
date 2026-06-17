@@ -140,21 +140,16 @@ export const useStudyStore = defineStore('study', {
       this.exporting[key] = true
       this.error = null
 
-      const previewWindow = format === 'pdf' ? window.open('', '_blank') : null
-      if (previewWindow) {
-        previewWindow.opener = null
-        previewWindow.document.title = 'Preparing PDF...'
-        previewWindow.document.body.innerHTML = '<p style="font-family: sans-serif; padding: 24px;">Preparing PDF...</p>'
-      }
-
       try {
         const response = await exportStudyAid(content, format, STUDY_AID_TYPES.find((item) => item.id === type)?.label || 'Study Aid')
         const blob = response.data instanceof Blob ? response.data : new Blob([response.data])
         const blobUrl = URL.createObjectURL(blob)
         const filename = `${type}.${format}`
 
-        if (previewWindow && format === 'pdf') {
-          previewWindow.location.href = blobUrl
+        if (format === 'pdf') {
+          window.location.href = blobUrl
+          window.setTimeout(() => URL.revokeObjectURL(blobUrl), 300000)
+          return
         }
 
         const link = document.createElement('a')
@@ -165,9 +160,6 @@ export const useStudyStore = defineStore('study', {
         link.remove()
         window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
       } catch (error) {
-        if (previewWindow) {
-          previewWindow.close()
-        }
         this.error = error.message || 'Export failed. Please try again.'
         throw error
       } finally {
