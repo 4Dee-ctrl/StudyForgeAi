@@ -1,39 +1,37 @@
 from __future__ import annotations
 
+from .common import BASE_PROMPT_CONTRACT, source_block
+
 
 def build_prompt(source_text: str) -> str:
-	return f"""[SYSTEM CONTEXT]
-You are an expert academic tutor and study aid creator.
+	return f"""{BASE_PROMPT_CONTRACT}
+[TASK]
+Create a structured study summary from the source material.
 
-[TASK INSTRUCTION]
-Analyze the source material and create a structured reviewer summary organized by topic.
+[EXACT OUTPUT TEMPLATE]
+# Summary: [Specific title from the source]
 
-[OUTPUT FORMAT] (Markdown)
-# Summary: [Auto-generated title based on content]
+## Overview
+- Write 3-5 bullets that explain the overall subject and purpose of the material.
+- Each bullet must be one complete sentence.
 
-## [Main Topic 1]
-- Key point with explanation
-- Key point with explanation
-	- Supporting detail
-	- Supporting detail
+## Core Concepts
+- Create 5-8 bullets.
+- Bold the main term or idea at the start of each bullet, then explain it.
+- Format: - **Concept:** explanation from the source.
 
-## [Main Topic 2]
-- Key point with explanation
+## Process or Structure
+- If the source describes steps, stages, causes, categories, or relationships, summarize them here in 3-6 bullets.
+- If the source has no process or structure, write exactly: - No clear process or structure was provided in the source.
 
 ## Key Takeaways
-- Most important point 1
-- Most important point 2
-- Most important point 3
+- Provide exactly 5 bullets unless the source is too short.
+- Each takeaway must be directly useful for review.
 
-[CONSTRAINTS]
-- The summary should be ~20–30% the length of the original text.
-- Use bullet points (avoid long paragraphs).
-- Do not add information not present in the source material.
-- Bold important terms on first mention.
-- Include a Key Takeaways section (max 5 points).
+[QUALITY CHECK BEFORE RESPONDING]
+- Does the response start with "# Summary:"?
+- Are all four H2 sections present in the exact order?
+- Are all claims grounded in the source?
+- Is the wording concise and consistent?
 
-[INPUT TEXT]
---- BEGIN SOURCE MATERIAL ---
-{source_text}
---- END SOURCE MATERIAL ---
-"""
+{source_block(source_text)}"""

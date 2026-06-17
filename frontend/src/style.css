@@ -136,7 +136,9 @@ a {
 
 .top-nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  justify-content: flex-end;
 }
 
 .top-nav a,
@@ -171,11 +173,108 @@ main {
   flex: 1;
 }
 
+.landing-view,
+.tool-view,
 .home-view,
+.content-view,
 .results-view {
   width: min(960px, calc(100% - 32px));
   margin: 0 auto;
   padding: 32px 0 48px;
+}
+
+.landing-view {
+  width: min(1120px, calc(100% - 32px));
+}
+
+.landing-hero {
+  min-height: 520px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  align-items: center;
+  gap: 40px;
+  border-bottom: 1px solid var(--border);
+}
+
+.landing-copy {
+  max-width: 720px;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.hero-product-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.hero-product-panel div,
+.feature-band article,
+.content-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.hero-product-panel div {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+}
+
+.hero-product-panel span {
+  color: var(--primary-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.hero-product-panel small,
+.feature-band p,
+.content-panel p {
+  color: var(--muted);
+}
+
+.feature-band {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 24px 0 0;
+}
+
+.feature-band article {
+  padding: 20px;
+}
+
+.feature-band p {
+  margin-top: 8px;
+}
+
+.content-view {
+  max-width: 860px;
+}
+
+.content-view > h1 {
+  max-width: 720px;
+  margin-bottom: 20px;
+}
+
+.content-panel {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+}
+
+.legal-copy {
+  gap: 10px;
+}
+
+.legal-copy h2 {
+  margin-top: 8px;
 }
 
 .hero-band {
@@ -654,9 +753,23 @@ a:focus-visible {
   }
 
   .home-view,
+  .tool-view,
+  .landing-view,
+  .content-view,
   .results-view {
     width: min(100% - 24px, 960px);
     padding-top: 16px;
+  }
+
+  .landing-hero {
+    min-height: auto;
+    grid-template-columns: 1fr;
+    gap: 22px;
+    padding: 32px 0 24px;
+  }
+
+  .feature-band {
+    grid-template-columns: 1fr;
   }
 
   .hero-band {

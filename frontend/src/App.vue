@@ -9,8 +9,11 @@
         </span>
       </RouterLink>
       <nav class="top-nav" aria-label="Main navigation">
-        <RouterLink to="/">Input</RouterLink>
-        <RouterLink to="/results">Results</RouterLink>
+        <RouterLink to="/">Home</RouterLink>
+        <RouterLink to="/about">About Us</RouterLink>
+        <RouterLink to="/privacy">Privacy Policy</RouterLink>
+        <RouterLink to="/terms">Terms</RouterLink>
+        <RouterLink to="/ai">AI Tool</RouterLink>
       </nav>
     </header>
 
@@ -19,7 +22,7 @@
     </main>
 
     <footer class="app-footer">
-      <span>StudyForge MVP</span>
+      <span>StudyForge AI</span>
       <span>Verify AI-generated study material against your source.</span>
     </footer>
   </div>

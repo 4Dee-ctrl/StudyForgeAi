@@ -6,18 +6,18 @@ from functools import lru_cache
 from fastapi import APIRouter
 
 from ..config import settings
-from ..exceptions import ServerConfigurationError
 from ..schemas.models import GenerateMeta, GenerateRequest, GenerateResponse
 from ..services.gemini import GeminiService
+from ..services.local_generator import LocalStudyAidGenerator
 
 router = APIRouter(tags=["Generate"])
 
 
 @lru_cache(maxsize=1)
-def _get_gemini() -> GeminiService:
+def _get_generator() -> GeminiService | LocalStudyAidGenerator:
 	api_key = (settings.gemini_api_key or "").strip()
-	if not api_key:
-		raise ServerConfigurationError("Server configuration error.")
+	if not api_key or api_key == "your_api_key_here":
+		return LocalStudyAidGenerator()
 	return GeminiService(api_key=api_key, model_names=settings.gemini_model_chain)
 
 
@@ -29,12 +29,12 @@ def _get_gemini() -> GeminiService:
 async def generate(payload: GenerateRequest) -> GenerateResponse:
 	"""Generates a study aid from text.
 
-	Phase 4 integrates Gemini and returns Markdown content.
+	Uses Gemini when configured, or a deterministic local generator for development.
 	"""
 
-	gemini = _get_gemini()
+	generator = _get_generator()
 	result = await asyncio.to_thread(
-		gemini.generate,
+		generator.generate,
 		text=payload.text,
 		study_aid_type=payload.type,
 	)

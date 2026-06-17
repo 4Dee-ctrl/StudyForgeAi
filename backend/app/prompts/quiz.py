@@ -1,48 +1,49 @@
 from __future__ import annotations
 
+from .common import BASE_PROMPT_CONTRACT, source_block
+
 
 def build_prompt(source_text: str) -> str:
-	return f"""[SYSTEM CONTEXT]
-You are an expert academic tutor and study aid creator.
+	return f"""{BASE_PROMPT_CONTRACT}
+[TASK]
+Create a practice quiz that tests recall, comprehension, and application of the source material.
 
-[TASK INSTRUCTION]
-Create a practice quiz that tests comprehension of the source material.
-
-[OUTPUT FORMAT] (Markdown)
-# Quiz: [Auto-generated title]
+[EXACT OUTPUT TEMPLATE]
+# Quiz: [Specific title from the source]
 
 ## Multiple Choice
-
 **1. [Question text]**
-- A) Option A
-- B) Option B
-- C) Option C
-- D) Option D
+- A) [Option]
+- B) [Option]
+- C) [Option]
+- D) [Option]
 
-## Identification / Short Answer
-
-**6. [Question or prompt]**
+## Short Answer
+**6. [Question text]**
 
 ## True or False
-
-**9. [Statement]**
+**9. [Statement from the source]**
 
 ---
 
 # Answer Key
+**1.** [Letter]) [Correct option] - [One-sentence explanation grounded in the source.]
 
-**1.** C) Option C — Brief explanation
+[QUESTION RULES]
+- Create exactly 10 questions when enough source material is available.
+- Questions 1-5 must be Multiple Choice.
+- Questions 6-8 must be Short Answer.
+- Questions 9-10 must be True or False.
+- Number questions consecutively from 1 to 10.
+- Multiple-choice questions must have exactly four options: A, B, C, D.
+- Use a balanced answer distribution for multiple choice. Do not make every answer A.
+- Every answer-key item must include a short explanation.
+- Do not reveal answers before the Answer Key.
 
-[CONSTRAINTS]
-- Generate 10–20 questions depending on content length.
-- Mix: ~50% multiple choice, ~30% identification, ~20% true/false.
-- Every question must be answerable from the source material alone.
-- Multiple choice distractors should be plausible.
-- Keep the Answer Key separated from the questions.
-- Do not add facts not present in the source.
+[QUALITY CHECK BEFORE RESPONDING]
+- Does the response start with "# Quiz:"?
+- Are the four main sections present in this order: Multiple Choice, Short Answer, True or False, Answer Key?
+- Are there exactly 10 numbered questions if the source supports it?
+- Is every question answerable from the source alone?
 
-[INPUT TEXT]
---- BEGIN SOURCE MATERIAL ---
-{source_text}
---- END SOURCE MATERIAL ---
-"""
+{source_block(source_text)}"""

@@ -44,15 +44,15 @@ class GeminiService:
 			raise ServerConfigurationError("Server configuration error.")
 
 		self._base_generation_config = {
-			"temperature": 0.3,
-			"top_p": 0.95,
+			"temperature": 0.2,
+			"top_p": 0.9,
 			"top_k": 40,
 			"max_output_tokens": 8192,
 		}
 
 		self._quiz_generation_config = {
 			**self._base_generation_config,
-			"temperature": 0.5,
+			"temperature": 0.25,
 		}
 
 		self._safety_settings = [

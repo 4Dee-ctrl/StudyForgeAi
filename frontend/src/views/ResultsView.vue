@@ -23,14 +23,14 @@ async function copyActive() {
 
 function startOver() {
   store.clearAll()
-  router.push('/')
+  router.push('/ai')
 }
 </script>
 
 <template>
   <section class="results-view">
     <div class="results-toolbar">
-      <button class="ghost-button" type="button" @click="router.push('/')">Back to Input</button>
+      <button class="ghost-button" type="button" @click="router.push('/ai')">Back to AI Tool</button>
       <button class="ghost-button" type="button" @click="showSource = !showSource">
         {{ showSource ? 'Hide Source' : 'Show Source' }}
       </button>
@@ -45,7 +45,7 @@ function startOver() {
     <section v-if="!store.hasResults && !store.isGenerating" class="empty-state">
       <h1>No study aids yet</h1>
       <p>Paste or upload source material first, then generate results.</p>
-      <button class="primary-button" type="button" @click="router.push('/')">Go to Input</button>
+      <button class="primary-button" type="button" @click="router.push('/ai')">Go to AI Tool</button>
     </section>
 
     <template v-else>

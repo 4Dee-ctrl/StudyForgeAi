@@ -1,52 +1,50 @@
 from __future__ import annotations
 
+from .common import BASE_PROMPT_CONTRACT, source_block
+
 
 def build_prompt(source_text: str) -> str:
-	return f"""[SYSTEM CONTEXT]
-You are an expert academic tutor and study aid creator.
+	return f"""{BASE_PROMPT_CONTRACT}
+[TASK]
+Create a comprehensive exam-prep study guide from the source material.
 
-[TASK INSTRUCTION]
-Create a comprehensive, exam-prep-style study guide based on the source material.
-
-[OUTPUT FORMAT] (Markdown)
-# Study Guide: [Auto-generated title]
+[EXACT OUTPUT TEMPLATE]
+# Study Guide: [Specific title from the source]
 
 ## Overview
-Brief description of what this study guide covers and how to use it.
+- Write 3-4 bullets explaining what the material covers.
 
-## Topic 1: [Topic Name]
+## Learning Objectives
+- Write 4-6 "I can..." statements.
 
-### What You Need to Know
-- Key concepts in student-friendly language
+## Main Topics
+### [Topic Name]
+- **What it means:** 1-2 sentences.
+- **Details to remember:** 2-4 bullets.
+- **Common confusion:** 1 bullet naming a likely misunderstanding based only on the source.
 
-### Memory Aids
-- 💡 **Mnemonic:** ...
-- 🔗 **Connection:** ...
-
-### Common Mistakes to Avoid
-- ❌ ...
-- ✅ ...
+## Review Questions
+- Write 5 open-ended questions a student should be able to answer after studying.
 
 ## Quick Review Checklist
-- [ ] I can explain ...
+- [ ] Write 5-8 checklist items.
 
 ## Summary Table
-
-| Concept | Key Point | Example |
+| Concept | Key Point | Source Detail |
 |---|---|---|
-| ... | ... | ... |
+| [Concept] | [Main idea] | [Specific supporting detail from source] |
 
-[CONSTRAINTS]
-- Use student-friendly language.
-- Explain jargon when it appears.
-- Include at least one memory aid per major topic.
-- Include a Quick Review Checklist.
-- Include a summary table.
-- Use emojis sparingly (💡🔗❌✅📌).
-- Do not add information not present in the source.
+[CONTENT RULES]
+- Create 2-5 Main Topics depending on source length.
+- Use H3 headings only inside Main Topics.
+- Do not add memory aids unless the source itself supports them.
+- Keep each table cell under 25 words.
+- If the source is too short, create fewer topics and add "_Limited by available source material._" after the Overview.
 
-[INPUT TEXT]
---- BEGIN SOURCE MATERIAL ---
-{source_text}
---- END SOURCE MATERIAL ---
-"""
+[QUALITY CHECK BEFORE RESPONDING]
+- Does the response start with "# Study Guide:"?
+- Are all six H2 sections present in the exact order?
+- Does every topic include "What it means", "Details to remember", and "Common confusion"?
+- Are all claims grounded in the source?
+
+{source_block(source_text)}"""

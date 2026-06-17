@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 	)
 	max_file_size_mb: int = Field(default=10, validation_alias="MAX_FILE_SIZE_MB")
 	max_text_length: int = Field(default=50000, validation_alias="MAX_TEXT_LENGTH")
+	rate_limit_per_minute: int = Field(default=60, validation_alias="RATE_LIMIT_PER_MINUTE")
 	gemini_model: str = Field(default="gemini-3.1-flash-lite", validation_alias="GEMINI_MODEL")
 	gemini_fallback_models: str = Field(
 		default="gemini-2.5-flash-lite",

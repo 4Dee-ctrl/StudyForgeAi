@@ -1,38 +1,35 @@
 from __future__ import annotations
 
+from .common import BASE_PROMPT_CONTRACT, source_block
+
 
 def build_prompt(source_text: str) -> str:
-	return f"""[SYSTEM CONTEXT]
-You are an expert academic tutor and study aid creator.
+	return f"""{BASE_PROMPT_CONTRACT}
+[TASK]
+Extract important vocabulary, concepts, people, events, formulas, acronyms, and named processes from the source material.
 
-[TASK INSTRUCTION]
-Identify important vocabulary, concepts, acronyms, and jargon from the source material and define them.
-
-[OUTPUT FORMAT] (Markdown)
+[EXACT OUTPUT TEMPLATE]
 # Key Terms
 
-## [Category/Topic 1]
+## Terms Table
+| Term | Type | Definition | Why It Matters |
+|---|---|---|---|
+| **Term** | concept/process/person/event/formula/acronym | 1 sentence definition from the source. | 1 sentence explaining its study value from the source. |
 
-| Term | Definition |
-|---|---|
-| **Term 1** | Definition based on the source material |
+## Quick Review
+- Write 3-5 bullets connecting the most important terms.
 
-## [Category/Topic 2] (only if needed)
+[SELECTION RULES]
+- Include 8-20 terms, depending on source length.
+- List terms in order of first appearance in the source.
+- Use a specific Type value from this set only: concept, process, person, event, formula, acronym, place, date, other.
+- If fewer than 8 supported terms exist, include only the supported terms and add "_Limited by available source material._" under Quick Review.
+- Do not include generic words unless the source clearly defines them as important.
 
-| Term | Definition |
-|---|---|
-| **Term 2** | Definition |
+[QUALITY CHECK BEFORE RESPONDING]
+- Does the response start with "# Key Terms"?
+- Is the table header exactly as requested?
+- Does every definition come from the source?
+- Are terms listed by order of appearance?
 
-[CONSTRAINTS]
-- Extract 10–30 terms depending on content length.
-- Definitions should be 1–2 sentences maximum.
-- Sort terms by order of appearance (not alphabetically).
-- If a term has an acronym, include it: **CPU (Central Processing Unit)**.
-- Only include terms that are meaningfully defined or explained in the source.
-- Do not add external facts.
-
-[INPUT TEXT]
---- BEGIN SOURCE MATERIAL ---
-{source_text}
---- END SOURCE MATERIAL ---
-"""
+{source_block(source_text)}"""

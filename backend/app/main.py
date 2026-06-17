@@ -47,7 +47,6 @@ app.add_middleware(
 )
 
 
-_RATE_LIMIT_PER_MINUTE = 10
 _WINDOW_SECONDS = 60
 _rate_state: dict[str, tuple[float, int]] = {}
 
@@ -66,7 +65,7 @@ def _is_rate_limited(ip: str, now: float) -> bool:
     if now - window_start >= _WINDOW_SECONDS:
         window_start, count = now, 0
 
-    if count >= _RATE_LIMIT_PER_MINUTE:
+    if count >= settings.rate_limit_per_minute:
         _rate_state[ip] = (window_start, count)
         return True
 
