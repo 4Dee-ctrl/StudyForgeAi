@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from dataclasses import dataclass
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from ..exceptions import (
 	AITimeoutError,
@@ -17,6 +19,14 @@ from ..prompts import key_terms, quiz, study_guide, summary
 from ..schemas.models import StudyAidType
 
 logger = logging.getLogger("studyforge.ai")
+
+
+def _safe_error_message(exc: Exception) -> str:
+	message = str(exc)
+	message = re.sub(r"AIza[0-9A-Za-z_-]+", "[redacted-api-key]", message)
+	message = re.sub(r"AQ\.[0-9A-Za-z_-]+", "[redacted-api-key]", message)
+	message = re.sub(r"(key=)[^&\s]+", r"\1[redacted-api-key]", message, flags=re.IGNORECASE)
+	return message[:500]
 
 
 @dataclass(slots=True)
@@ -37,30 +47,46 @@ class GeminiService:
 		model_name: str | None = None,
 		model_names: list[str] | None = None,
 	):
-		genai.configure(api_key=api_key)
+		self._client = genai.Client(api_key=api_key)
 		chain = model_names or ([model_name] if model_name else [])
 		self._model_names = [name.strip() for name in chain if name and name.strip()]
 		if not self._model_names:
 			raise ServerConfigurationError("Server configuration error.")
 
-		self._base_generation_config = {
-			"temperature": 0.2,
-			"top_p": 0.9,
-			"top_k": 40,
-			"max_output_tokens": 8192,
-		}
-
-		self._quiz_generation_config = {
-			**self._base_generation_config,
-			"temperature": 0.25,
-		}
-
 		self._safety_settings = [
-			{"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_ONLY_HIGH"},
-			{"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_ONLY_HIGH"},
-			{"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_ONLY_HIGH"},
-			{"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_ONLY_HIGH"},
+			types.SafetySetting(
+				category="HARM_CATEGORY_HARASSMENT",
+				threshold="BLOCK_ONLY_HIGH",
+			),
+			types.SafetySetting(
+				category="HARM_CATEGORY_HATE_SPEECH",
+				threshold="BLOCK_ONLY_HIGH",
+			),
+			types.SafetySetting(
+				category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+				threshold="BLOCK_ONLY_HIGH",
+			),
+			types.SafetySetting(
+				category="HARM_CATEGORY_DANGEROUS_CONTENT",
+				threshold="BLOCK_ONLY_HIGH",
+			),
 		]
+
+		self._base_generation_config = types.GenerateContentConfig(
+			temperature=0.2,
+			top_p=0.9,
+			top_k=40,
+			max_output_tokens=8192,
+			safety_settings=self._safety_settings,
+		)
+
+		self._quiz_generation_config = types.GenerateContentConfig(
+			temperature=0.25,
+			top_p=0.9,
+			top_k=40,
+			max_output_tokens=8192,
+			safety_settings=self._safety_settings,
+		)
 
 	def generate(self, *, text: str, study_aid_type: StudyAidType) -> GeminiResult:
 		cleaned_text = (text or "").strip()
@@ -84,7 +110,6 @@ class GeminiService:
 
 		started = time.perf_counter()
 		for model_index, model_name in enumerate(self._model_names):
-			model = genai.GenerativeModel(model_name)
 			is_fallback_model = model_index > 0
 
 			if is_fallback_model:
@@ -95,7 +120,6 @@ class GeminiService:
 
 			try:
 				return self._generate_with_model(
-					model=model,
 					model_name=model_name,
 					prompt=prompt,
 					generation_config=generation_config,
@@ -108,7 +132,7 @@ class GeminiService:
 				if model_index < len(self._model_names) - 1:
 					continue
 				raise
-			except GeminiAPIError as exc:
+			except (GeminiAPIError, ServerConfigurationError) as exc:
 				last_exc = exc
 				if model_index < len(self._model_names) - 1:
 					continue
@@ -119,10 +143,9 @@ class GeminiService:
 	def _generate_with_model(
 		self,
 		*,
-		model,
 		model_name: str,
 		prompt: str,
-		generation_config: dict,
+		generation_config: types.GenerateContentConfig,
 		started: float,
 		study_aid_type: StudyAidType,
 		backoff_seconds: list[int],
@@ -131,10 +154,10 @@ class GeminiService:
 
 		for attempt in range(len(backoff_seconds) + 1):
 			try:
-				response = model.generate_content(
-					prompt,
-					generation_config=generation_config,
-					safety_settings=self._safety_settings,
+				response = self._client.models.generate_content(
+					model=model_name,
+					contents=prompt,
+					config=generation_config,
 				)
 
 				feedback = getattr(response, "prompt_feedback", None)
@@ -183,6 +206,13 @@ class GeminiService:
 			except Exception as exc:  # noqa: BLE001
 				last_exc = exc
 				msg = str(exc).lower()
+				logger.warning(
+					"Gemini model request failed (model=%s, attempt=%s, error=%s: %s)",
+					model_name,
+					attempt + 1,
+					exc.__class__.__name__,
+					_safe_error_message(exc),
+				)
 
 				if any(token in msg for token in ["429", "resource_exhausted", "too many requests"]):
 					if attempt < len(backoff_seconds):
@@ -199,7 +229,16 @@ class GeminiService:
 				if any(token in msg for token in ["deadline exceeded", "timeout"]):
 					raise AITimeoutError("AI request timed out. Please try again.") from exc
 
-				if any(token in msg for token in ["api key", "unauthorized", "unauthenticated", "permission"]):
+				if any(
+					token in msg
+					for token in [
+						"api key",
+						"api_key_invalid",
+						"unauthorized",
+						"unauthenticated",
+						"permission",
+					]
+				):
 					raise ServerConfigurationError("Server configuration error.") from exc
 
 				raise GeminiAPIError("Unable to reach AI service. Please try again later.") from exc
