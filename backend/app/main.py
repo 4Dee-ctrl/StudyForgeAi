@@ -16,22 +16,11 @@ from .exceptions import StudyForgeError
 from .routers import export, extract, generate
 
 
-_log_record_factory = logging.getLogRecordFactory()
-
-
-def _record_factory(*args: Any, **kwargs: Any) -> logging.LogRecord:
-    record = _log_record_factory(*args, **kwargs)
-    if not hasattr(record, "request_id"):
-        record.request_id = "-"
-    return record
-
-
 logger = logging.getLogger("studyforge")
 if not logger.handlers:
-    logging.setLogRecordFactory(_record_factory)
     logging.basicConfig(
         level=logging.INFO,
-        format="[%(asctime)s] [%(levelname)s] [%(request_id)s] %(message)s",
+        format="[%(asctime)s] [%(levelname)s] %(message)s",
     )
 
 
