@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { extractFile, exportStudyAid, generateStudyAid } from '../services/api'
 
+const STORAGE_KEY = 'studyforge-study-session-v1'
+
 export const STUDY_AID_TYPES = [
   { id: 'summary', label: 'Summary' },
   { id: 'key_terms', label: 'Key Terms' },
@@ -17,21 +19,67 @@ function initialResults() {
   }
 }
 
+function defaultSelectedTypes() {
+  return STUDY_AID_TYPES.map((type) => type.id)
+}
+
+function loadPersistedSession() {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+
+    const parsed = JSON.parse(raw)
+    const selectedTypes = Array.isArray(parsed.selectedTypes) && parsed.selectedTypes.length
+      ? parsed.selectedTypes.filter((type) => STUDY_AID_TYPES.some((item) => item.id === type))
+      : defaultSelectedTypes()
+    const results = { ...initialResults(), ...(parsed.results || {}) }
+    const activeTab = STUDY_AID_TYPES.some((type) => type.id === parsed.activeTab)
+      ? parsed.activeTab
+      : selectedTypes[0] || 'summary'
+
+    return {
+      sourceText: parsed.sourceText || '',
+      sourceFile: parsed.sourceFile || null,
+      selectedTypes,
+      results,
+      resultMeta: parsed.resultMeta || {},
+      typeErrors: parsed.typeErrors || {},
+      activeTab,
+      generationProgress: parsed.generationProgress || Object.fromEntries(
+        selectedTypes.map((type) => [type, results[type] ? 'done' : 'ready']),
+      ),
+    }
+  } catch {
+    window.localStorage.removeItem(STORAGE_KEY)
+    return null
+  }
+}
+
+function hasStoredResults(results) {
+  return Object.values(results || {}).some(Boolean)
+}
+
 export const useStudyStore = defineStore('study', {
-  state: () => ({
-    sourceText: '',
-    sourceFile: null,
-    selectedTypes: STUDY_AID_TYPES.map((type) => type.id),
-    isExtracting: false,
-    isGenerating: false,
-    generationProgress: {},
-    results: initialResults(),
-    resultMeta: {},
-    error: null,
-    typeErrors: {},
-    activeTab: 'summary',
-    exporting: {},
-  }),
+  state: () => {
+    const persisted = loadPersistedSession()
+
+    return {
+      sourceText: persisted?.sourceText || '',
+      sourceFile: persisted?.sourceFile || null,
+      selectedTypes: persisted?.selectedTypes || defaultSelectedTypes(),
+      isExtracting: false,
+      isGenerating: false,
+      generationProgress: persisted?.generationProgress || {},
+      results: persisted?.results || initialResults(),
+      resultMeta: persisted?.resultMeta || {},
+      error: null,
+      typeErrors: persisted?.typeErrors || {},
+      activeTab: persisted?.activeTab || 'summary',
+      exporting: {},
+    }
+  },
 
   getters: {
     charCount: (state) => state.sourceText.length,
@@ -45,6 +93,29 @@ export const useStudyStore = defineStore('study', {
   },
 
   actions: {
+    persistSession() {
+      if (typeof window === 'undefined') return
+
+      if (!hasStoredResults(this.results)) {
+        window.localStorage.removeItem(STORAGE_KEY)
+        return
+      }
+
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          sourceText: this.sourceText,
+          sourceFile: this.sourceFile,
+          selectedTypes: this.selectedTypes,
+          generationProgress: this.generationProgress,
+          results: this.results,
+          resultMeta: this.resultMeta,
+          typeErrors: this.typeErrors,
+          activeTab: this.activeTab,
+        }),
+      )
+    },
+
     setSourceText(text) {
       this.sourceText = text
       this.error = null
@@ -60,6 +131,7 @@ export const useStudyStore = defineStore('study', {
 
     setActiveTab(type) {
       this.activeTab = type
+      this.persistSession()
     },
 
     async extractFile(file) {
@@ -91,6 +163,7 @@ export const useStudyStore = defineStore('study', {
       this.isGenerating = true
       this.generationProgress = Object.fromEntries(this.selectedTypes.map((type) => [type, 'waiting']))
       this.activeTab = this.selectedTypes[0]
+      this.persistSession()
 
       await Promise.all(
         this.selectedTypes.map(async (type) => {
@@ -114,6 +187,7 @@ export const useStudyStore = defineStore('study', {
         this.error = 'Study aid generation failed. Please try again.'
       }
 
+      this.persistSession()
       return generated
     },
 
@@ -129,6 +203,8 @@ export const useStudyStore = defineStore('study', {
       } catch (error) {
         this.typeErrors[type] = error.message
         this.generationProgress[type] = 'error'
+      } finally {
+        this.persistSession()
       }
     },
 
@@ -170,7 +246,7 @@ export const useStudyStore = defineStore('study', {
     clearAll() {
       this.sourceText = ''
       this.sourceFile = null
-      this.selectedTypes = STUDY_AID_TYPES.map((type) => type.id)
+      this.selectedTypes = defaultSelectedTypes()
       this.isExtracting = false
       this.isGenerating = false
       this.generationProgress = {}
@@ -180,6 +256,9 @@ export const useStudyStore = defineStore('study', {
       this.typeErrors = {}
       this.activeTab = 'summary'
       this.exporting = {}
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(STORAGE_KEY)
+      }
     },
   },
 })
