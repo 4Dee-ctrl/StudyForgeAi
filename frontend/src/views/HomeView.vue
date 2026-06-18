@@ -4,6 +4,9 @@
       <div class="landing-copy">
         <p class="eyebrow">StudyForge AI</p>
         <h1>Build better study materials from the notes you already have.</h1>
+        <video class="hero-video" autoplay muted loop playsinline>
+        <source src="/hero-video.mp4" type="video/mp4" />
+        </video>
         <p class="hero-copy">
           StudyForge helps students turn class content into summaries, key terms, quizzes, and study guides without making the AI workspace the first stop.
         </p>
